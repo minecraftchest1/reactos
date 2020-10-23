@@ -1680,7 +1680,7 @@ PFILE_OBJECT
 NTAPI
 MmGetFileObjectForSection(IN PVOID SectionObject)
 {
-    PSECTION_OBJECT Section;
+    PSECTION Section;
     ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
     ASSERT(SectionObject != NULL);
 
@@ -1753,7 +1753,7 @@ VOID
 NTAPI
 MmGetImageInformation (OUT PSECTION_IMAGE_INFORMATION ImageInformation)
 {
-    PSECTION_OBJECT SectionObject;
+    PSECTION SectionObject;
 
     /* Get the section object of this process*/
     SectionObject = PsGetCurrentProcess()->SectionObject;

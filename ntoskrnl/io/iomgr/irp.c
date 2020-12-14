@@ -86,7 +86,7 @@ IopAbortInterruptedIrp(IN PKEVENT EventObject,
         if (CancelResult)
         {
             /* Wait for the IRP to be cancelled */
-            Wait.QuadPart = -100000;
+            Wait.QuadPart = -100000LL;
             while (!KeReadStateEvent(EventObject))
             {
                 /* Delay indefintely */
@@ -730,7 +730,7 @@ IopAllocateIrpMustSucceed(IN CCHAR StackSize)
         i--;
 
         /* First, sleep for 10ms */
-        Sleep.QuadPart = -10 * 1000 * 10;
+        Sleep.QuadPart = -10LL * 1000 * 10;
         KeDelayExecutionThread(KernelMode, FALSE, &Sleep);
 
         /* Then, retry allocation */
@@ -1179,7 +1179,7 @@ IoCancelThreadIo(IN PETHREAD Thread)
     }
 
      /* Wait 100 milliseconds */
-    Interval.QuadPart = -1000000;
+    Interval.QuadPart = -1000000LL;
 
     /* Wait till all the IRPs are completed or cancelled. */
     while (!IsListEmpty(&Thread->IrpList))

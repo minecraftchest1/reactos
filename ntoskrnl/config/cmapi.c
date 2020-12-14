@@ -2237,6 +2237,7 @@ CmUnloadKey(IN PCM_KEY_CONTROL_BLOCK Kcb,
         }
         else
         {
+            // __debugbreak();
             DPRINT1("CmUnloadKey: Force unloading is HALF-IMPLEMENTED, expect dangling KCBs problems!\n");
             if (CmpEnumerateOpenSubKeys(Kcb, TRUE, TRUE) != 0)
             {

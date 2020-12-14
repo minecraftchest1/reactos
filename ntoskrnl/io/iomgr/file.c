@@ -4090,7 +4090,7 @@ NtCancelIoFile(IN HANDLE FileHandle,
     if (OurIrpsInList)
     {
         /* Setup a 10ms wait */
-        Interval.QuadPart = -100000;
+        Interval.QuadPart = -100000LL;
 
         /* Start looping */
         while (OurIrpsInList)

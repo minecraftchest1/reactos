@@ -511,7 +511,7 @@ IoInitSystem(IN PLOADER_PARAMETER_BLOCK LoaderBlock)
     InitializeListHead(&IopTimerQueueHead);
 
     /* Initialize the DPC/Timer which will call the other Timer Routines */
-    ExpireTime.QuadPart = -10000000;
+    ExpireTime.QuadPart = -10000000LL;
     KeInitializeDpc(&IopTimerDpc, IopTimerDispatch, NULL);
     KeInitializeTimerEx(&IopTimer, SynchronizationTimer);
     KeSetTimerEx(&IopTimer, ExpireTime, 1000, &IopTimerDpc);

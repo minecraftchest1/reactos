@@ -446,7 +446,7 @@ MiInitBalancerThread(VOID)
 #if !defined(__GNUC__)
 
     LARGE_INTEGER dummyJunkNeeded;
-    dummyJunkNeeded.QuadPart = -20000000; /* 2 sec */
+    dummyJunkNeeded.QuadPart = -20000000LL; /* 2 sec */
     ;
 #endif
 

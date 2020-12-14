@@ -44,7 +44,7 @@ MmAllocateNonCachedMemory(IN SIZE_T NumberOfBytes)
     // Use the MDL allocator for simplicity, so setup the parameters
     //
     LowAddress.QuadPart = 0;
-    HighAddress.QuadPart = -1;
+    HighAddress.QuadPart = -1LL;
     SkipBytes.QuadPart = 0;
     CacheAttribute = MiPlatformCacheAttributes[0][MmNonCached];
 

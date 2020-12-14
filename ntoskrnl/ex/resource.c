@@ -631,7 +631,7 @@ ExpWaitForResource(IN PERESOURCE Resource,
 
     /* Increase contention count and use a 5 second timeout */
     Resource->ContentionCount++;
-    Timeout.QuadPart = 500 * -10000;
+    Timeout.QuadPart = 500LL * -10000;
     for (;;)
     {
         /* Wait for ownership */

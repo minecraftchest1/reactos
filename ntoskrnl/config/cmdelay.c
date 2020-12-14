@@ -322,7 +322,7 @@ CmpDelayDerefKeyControlBlock(IN PCM_KEY_CONTROL_BLOCK Kcb)
     {
         /* Yes, we have no work item, setup the interval */
         CmpDelayDerefKCBWorkItemActive = TRUE;
-        Timeout.QuadPart = CmpDelayDerefKCBIntervalInSeconds * -10000000;
+        Timeout.QuadPart = -10000000LL * CmpDelayDerefKCBIntervalInSeconds;
         KeSetTimer(&CmpDelayDerefKCBTimer, Timeout, &CmpDelayDerefKCBDpc);
     }
 
@@ -341,7 +341,7 @@ CmpArmDelayedCloseTimer(VOID)
     CmpDelayCloseWorkItemActive = TRUE;
 
     /* Setup the interval */
-    Timeout.QuadPart = CmpDelayCloseIntervalInSeconds * -10000000;
+    Timeout.QuadPart = -10000000LL * CmpDelayCloseIntervalInSeconds;
     KeSetTimer(&CmpDelayCloseTimer, Timeout, &CmpDelayCloseDpc);
 }
 

@@ -195,7 +195,7 @@ KiInitMachineDependent(VOID)
                     /* Fill out the starting data */
                     CurrentSample->PerfStart = KeQueryPerformanceCounter(NULL);
                     CurrentSample->TSCStart = __rdtsc();
-                    CurrentSample->PerfFreq.QuadPart = -50000;
+                    CurrentSample->PerfFreq.QuadPart = -50000LL;
 
                     /* Sleep for this sample */
                     KeDelayExecutionThread(KernelMode,

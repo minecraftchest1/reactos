@@ -101,7 +101,7 @@ IopRestartLogWorker(VOID)
     KeInitializeTimer(&WorkerDpc->Timer);
 
     /* Restart after 30 seconds */
-    Timeout.QuadPart = (LONGLONG)-300000000;
+    Timeout.QuadPart = -300000000LL;
     KeSetTimer(&WorkerDpc->Timer, Timeout, &WorkerDpc->Dpc);
 }
 

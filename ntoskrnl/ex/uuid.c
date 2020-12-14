@@ -229,7 +229,7 @@ ExpAllocateUuids(PULARGE_INTEGER Time,
     if (TimeDiff.QuadPart < 0)
     {
         ++ExpUuidSequenceNumber;
-        TimeDiff.QuadPart = 2 * TIME_FRAME;
+        TimeDiff.QuadPart = 2LL * TIME_FRAME;
 
         /* It's to be saved */
         ExpUuidSequenceNumberNotSaved = TRUE;

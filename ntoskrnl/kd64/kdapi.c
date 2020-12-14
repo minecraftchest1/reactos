@@ -1824,7 +1824,7 @@ KdpTimeSlipWork(IN PVOID Context)
     KeReleaseSpinLock(&KdpTimeSlipEventLock, OldIrql);
 
     /* Delay the DPC until it runs next time */
-    DueTime.QuadPart = -1800000000;
+    DueTime.QuadPart = -1800000000LL;
     KeSetTimer(&KdpTimeSlipTimer, DueTime, &KdpTimeSlipDpc);
 }
 

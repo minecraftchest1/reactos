@@ -151,7 +151,7 @@ KeBalanceSetManager(IN PVOID Context)
     KeInitializeDpc(&ScanDpc, KiScanReadyQueues, &KiReadyScanLast);
 
     /* Setup the periodic timer */
-    DueTime.QuadPart = -1 * 10 * 1000 * 1000;
+    DueTime.QuadPart = -1LL * 10 * 1000 * 1000;
     KeSetTimerEx(&PeriodTimer, DueTime, 1000, &ScanDpc);
 
     /* Setup the wait objects */

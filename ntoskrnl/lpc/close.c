@@ -313,7 +313,7 @@ LpcpDeletePort(IN PVOID ObjectBody)
     PAGED_CODE();
     LPCTRACE(LPC_CLOSE_DEBUG, "Port: %p. Flags: %lx\n", Port, Port->Flags);
 
-    Timeout.QuadPart = -1000000;
+    Timeout.QuadPart = -1000000LL;
 
     /* Check if this is a communication port */
     if ((Port->Flags & LPCP_PORT_TYPE_MASK) == LPCP_COMMUNICATION_PORT)

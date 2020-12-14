@@ -1019,7 +1019,7 @@ InbvRotationThread(
 
         if (RotBarSelection == RB_SQUARE_CELLS)
         {
-            Delay.QuadPart = -800000; // 80 ms
+            Delay.QuadPart = -800000LL; // 80 ms
             Total = 18;
             Index %= Total;
 
@@ -1050,7 +1050,7 @@ InbvRotationThread(
         }
         else if (RotBarSelection == RB_PROGRESS_BAR)
         {
-            Delay.QuadPart = -600000; // 60 ms
+            Delay.QuadPart = -600000LL; // 60 ms
             Total = SCREEN_WIDTH;
             Index %= Total;
 

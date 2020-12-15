@@ -92,7 +92,7 @@ const struct test winetest_testlist[] =
     { "NtDuplicateObject",              func_NtDuplicateObject },
     { "NtFreeVirtualMemory",            func_NtFreeVirtualMemory },
     { "NtLoadUnloadKey",                func_NtLoadUnloadKey },
-    // { "NtMapViewOfSection",             func_NtMapViewOfSection },
+    { "NtMapViewOfSection",             func_NtMapViewOfSection },
     { "NtMutant",                       func_NtMutant },
     { "NtOpenKey",                      func_NtOpenKey },
     { "NtOpenProcessToken",             func_NtOpenProcessToken },

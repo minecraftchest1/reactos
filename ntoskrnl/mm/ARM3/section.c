@@ -416,11 +416,15 @@ NTSTATUS
 NTAPI
 MiAddMappedPtes(IN PMMPTE FirstPte,
                 IN PFN_NUMBER PteCount,
-                IN PCONTROL_AREA ControlArea)
+                IN PCONTROL_AREA ControlArea,
+                IN PLARGE_INTEGER SectionOffset)
 {
     MMPTE TempPte;
     PMMPTE PointerPte, ProtoPte, LastProtoPte, LastPte;
     PSUBSECTION Subsection;
+
+    /* Mapping at offset not supported yet */
+    ASSERT(SectionOffset->QuadPart == 0);
 
     /* ARM3 doesn't support this yet */
     ASSERT(ControlArea->u.Flags.GlobalOnlyPerSession == 0);
@@ -1052,11 +1056,13 @@ NTAPI
 MiMapViewInSystemSpace(IN PVOID Section,
                        IN PMMSESSION Session,
                        OUT PVOID *MappedBase,
-                       IN OUT PSIZE_T ViewSize)
+                       IN OUT PSIZE_T ViewSize,
+                       IN PLARGE_INTEGER SectionOffset)
 {
     PVOID Base;
     PCONTROL_AREA ControlArea;
-    ULONG Buckets, SectionSize;
+    ULONG Buckets;
+    LONGLONG SectionSize;
     NTSTATUS Status;
     PAGED_CODE();
 
@@ -1073,13 +1079,31 @@ MiMapViewInSystemSpace(IN PVOID Section,
     ASSERT(NT_SUCCESS(Status));
 
     /* Get the section size at creation time */
-    SectionSize = ((PSECTION)Section)->SizeOfSection.LowPart;
+    SectionSize = ((PSECTION)Section)->SizeOfSection.QuadPart;
 
-    /* If the caller didn't specify a view size, assume the whole section */
-    if (!(*ViewSize)) *ViewSize = SectionSize;
+    /* If the caller didn't specify a view size, assume until the end of the section */
+    if (!(*ViewSize))
+    {
+        /* Check for overflow first */
+        if ((SectionSize - SectionOffset->QuadPart) > SIZE_T_MAX)
+        {
+            DPRINT1("Section end is too far away from the specified offset.\n");
+            MiDereferenceControlArea(ControlArea);
+            return STATUS_INVALID_VIEW_SIZE;
+        }
+        *ViewSize = SectionSize - SectionOffset->QuadPart;
+    }
+
+    /* Check overflow */
+    if ((SectionOffset->QuadPart + *ViewSize) < SectionOffset->QuadPart)
+    {
+        DPRINT1("Integer overflow between size & offset!\n");
+        MiDereferenceControlArea(ControlArea);
+        return STATUS_INVALID_VIEW_SIZE;
+    }
 
     /* Check if the caller wanted a larger section than the view */
-    if (*ViewSize > SectionSize)
+    if (SectionOffset->QuadPart + *ViewSize > SectionSize)
     {
         /* Fail */
         DPRINT1("View is too large\n");
@@ -1129,7 +1153,8 @@ MiMapViewInSystemSpace(IN PVOID Section,
     /* Create the actual prototype PTEs for this mapping */
     Status = MiAddMappedPtes(MiAddressToPte(Base),
                              BYTES_TO_PAGES(*ViewSize),
-                             ControlArea);
+                             ControlArea,
+                             SectionOffset);
     ASSERT(NT_SUCCESS(Status));
 
     /* Return the base adress of the mapping and success */
@@ -1644,20 +1669,23 @@ MiGetFileObjectForSectionAddress(
     if (Vad->u.VadFlags.Spare != 0)
     {
         PMEMORY_AREA MemoryArea = (PMEMORY_AREA)Vad;
-        PROS_SECTION_OBJECT Section;
 
         /* Check if it's a section view (RosMm section) */
         if (MemoryArea->Type == MEMORY_AREA_SECTION_VIEW)
         {
             /* Get the section pointer to the SECTION_OBJECT */
-            Section = MemoryArea->Data.SectionData.Section;
-            *FileObject = Section->FileObject;
+            *FileObject = MemoryArea->SectionData.Segment->FileObject;
         }
         else
         {
+#ifdef NEWCC
             ASSERT(MemoryArea->Type == MEMORY_AREA_CACHE);
             DPRINT1("Address is a cache section!\n");
             return STATUS_SECTION_NOT_IMAGE;
+#else
+            ASSERT(FALSE);
+            return STATUS_SECTION_NOT_IMAGE;
+#endif
         }
     }
     else
@@ -1689,7 +1717,7 @@ PFILE_OBJECT
 NTAPI
 MmGetFileObjectForSection(IN PVOID SectionObject)
 {
-    PSECTION_OBJECT Section;
+    PSECTION Section = SectionObject;
     ASSERT(KeGetCurrentIrql() == PASSIVE_LEVEL);
     ASSERT(SectionObject != NULL);
 
@@ -1697,12 +1725,11 @@ MmGetFileObjectForSection(IN PVOID SectionObject)
     if (MiIsRosSectionObject(SectionObject) == FALSE)
     {
         /* Return the file pointer stored in the control area */
-        Section = SectionObject;
         return Section->Segment->ControlArea->FilePointer;
     }
 
     /* Return the file object */
-    return ((PROS_SECTION_OBJECT)SectionObject)->FileObject;
+    return ((PMM_SECTION_SEGMENT)Section->Segment)->FileObject;
 }
 
 static
@@ -1717,19 +1744,21 @@ MiGetFileObjectForVad(
     if (Vad->u.VadFlags.Spare != 0)
     {
         PMEMORY_AREA MemoryArea = (PMEMORY_AREA)Vad;
-        PROS_SECTION_OBJECT Section;
 
         /* Check if it's a section view (RosMm section) */
         if (MemoryArea->Type == MEMORY_AREA_SECTION_VIEW)
         {
             /* Get the section pointer to the SECTION_OBJECT */
-            Section = MemoryArea->Data.SectionData.Section;
-            FileObject = Section->FileObject;
+            FileObject = MemoryArea->SectionData.Segment->FileObject;
         }
         else
         {
+#ifdef NEWCC
             ASSERT(MemoryArea->Type == MEMORY_AREA_CACHE);
             DPRINT1("VAD is a cache section!\n");
+#else
+            ASSERT(FALSE);
+#endif
             return NULL;
         }
     }
@@ -1762,15 +1791,21 @@ VOID
 NTAPI
 MmGetImageInformation (OUT PSECTION_IMAGE_INFORMATION ImageInformation)
 {
-    PSECTION_OBJECT SectionObject;
+    PSECTION SectionObject;
 
     /* Get the section object of this process*/
     SectionObject = PsGetCurrentProcess()->SectionObject;
     ASSERT(SectionObject != NULL);
     ASSERT(MiIsRosSectionObject(SectionObject) == TRUE);
 
+    if (SectionObject->u.Flags.Image == 0)
+    {
+        RtlZeroMemory(ImageInformation, sizeof(*ImageInformation));
+        return;
+    }
+
     /* Return the image information */
-    *ImageInformation = ((PROS_SECTION_OBJECT)SectionObject)->ImageSection->ImageInformation;
+    *ImageInformation = ((PMM_IMAGE_SECTION_OBJECT)SectionObject->Segment)->ImageInformation;
 }
 
 NTSTATUS
@@ -1811,19 +1846,10 @@ MmGetFileNameForSection(IN PVOID Section,
                         OUT POBJECT_NAME_INFORMATION *ModuleName)
 {
     PFILE_OBJECT FileObject;
+    PSECTION SectionObject = Section;
 
     /* Make sure it's an image section */
-    if (MiIsRosSectionObject(Section) == FALSE)
-    {
-        /* Check ARM3 Section flag */
-        if (((PSECTION)Section)->u.Flags.Image == 0)
-        {
-            /* It's not, fail */
-            DPRINT1("Not an image section\n");
-            return STATUS_SECTION_NOT_IMAGE;
-        }
-    }
-    else if (!(((PROS_SECTION_OBJECT)Section)->AllocationAttributes & SEC_IMAGE))
+    if (SectionObject->u.Flags.Image == 0)
     {
         /* It's not, fail */
         DPRINT1("Not an image section\n");
@@ -2905,7 +2931,7 @@ MmMapViewOfArm3Section(IN PVOID SectionObject,
     if (!(*ViewSize))
     {
         /* Compute it for the caller */
-        CalculatedViewSize = Section->SizeOfSection.QuadPart - 
+        CalculatedViewSize = Section->SizeOfSection.QuadPart -
                              SectionOffset->QuadPart;
 
         /* Check if it's larger than 4GB or overflows into kernel-mode */
@@ -3004,6 +3030,7 @@ MmMapViewInSessionSpace(IN PVOID Section,
                         IN OUT PSIZE_T ViewSize)
 {
     PAGED_CODE();
+    LARGE_INTEGER SectionOffset;
 
     // HACK
     if (MiIsRosSectionObject(Section))
@@ -3020,10 +3047,12 @@ MmMapViewInSessionSpace(IN PVOID Section,
 
     /* Use the system space API, but with the session view instead */
     ASSERT(MmIsAddressValid(MmSessionSpace) == TRUE);
+    SectionOffset.QuadPart = 0;
     return MiMapViewInSystemSpace(Section,
                                   &MmSessionSpace->Session,
                                   MappedBase,
-                                  ViewSize);
+                                  ViewSize,
+                                  &SectionOffset);
 }
 
 /*
@@ -3574,7 +3603,7 @@ NtMapViewOfSection(IN HANDLE SectionHandle,
     PVOID SafeBaseAddress;
     LARGE_INTEGER SafeSectionOffset;
     SIZE_T SafeViewSize;
-    PROS_SECTION_OBJECT Section;
+    PSECTION Section;
     PEPROCESS Process;
     NTSTATUS Status;
     ACCESS_MASK DesiredAccess;
@@ -3704,8 +3733,7 @@ NtMapViewOfSection(IN HANDLE SectionHandle,
         return Status;
     }
 
-    if (MiIsRosSectionObject(Section) &&
-        (Section->AllocationAttributes & SEC_PHYSICALMEMORY))
+    if (Section->u.Flags.PhysicalMemory)
     {
         if (PreviousMode == UserMode &&
             SafeSectionOffset.QuadPart + SafeViewSize > MmHighestPhysicalPage << PAGE_SHIFT)
@@ -3753,8 +3781,7 @@ NtMapViewOfSection(IN HANDLE SectionHandle,
     if (NT_SUCCESS(Status))
     {
         /* Check if this is an image for the current process */
-        if (MiIsRosSectionObject(Section) &&
-            (Section->AllocationAttributes & SEC_IMAGE) &&
+        if ((Section->u.Flags.Image) &&
             (Process == PsGetCurrentProcess()) &&
             (Status != STATUS_IMAGE_NOT_AT_BASE))
         {
@@ -3825,7 +3852,7 @@ NtExtendSection(IN HANDLE SectionHandle,
                 IN OUT PLARGE_INTEGER NewMaximumSize)
 {
     LARGE_INTEGER SafeNewMaximumSize;
-    PROS_SECTION_OBJECT Section;
+    PSECTION Section;
     NTSTATUS Status;
     KPROCESSOR_MODE PreviousMode = ExGetPreviousMode();
 
@@ -3861,30 +3888,24 @@ NtExtendSection(IN HANDLE SectionHandle,
                                        NULL);
     if (!NT_SUCCESS(Status)) return Status;
 
-    /* Really this should go in MmExtendSection */
-    if (!(Section->AllocationAttributes & SEC_FILE))
-    {
-        DPRINT1("Not extending a file\n");
-        ObDereferenceObject(Section);
-        return STATUS_SECTION_NOT_EXTENDED;
-    }
-
-    /* FIXME: Do the work */
+    Status = MmExtendSection(Section, &SafeNewMaximumSize);
 
     /* Dereference the section */
     ObDereferenceObject(Section);
 
-    /* Enter SEH */
-    _SEH2_TRY
+    if (NT_SUCCESS(Status))
     {
-        /* Write back the new size */
-        *NewMaximumSize = SafeNewMaximumSize;
+        _SEH2_TRY
+        {
+            /* Write back the new size */
+            *NewMaximumSize = SafeNewMaximumSize;
+        }
+        _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
+        {
+            Status = _SEH2_GetExceptionCode();
+        }
+        _SEH2_END;
     }
-    _SEH2_EXCEPT(EXCEPTION_EXECUTE_HANDLER)
-    {
-        /* Nothing to do */
-    }
-    _SEH2_END;
 
     /* Return the status */
     return STATUS_NOT_IMPLEMENTED;

@@ -140,3 +140,19 @@ FsRtlInitSystem(
 //
 extern PERESOURCE FsRtlPagingIoResources;
 extern PAGED_LOOKASIDE_LIST FsRtlFileLockLookasideList;
+
+//
+// File locking routine
+//
+NTSTATUS
+NTAPI
+FsRtlAcquireToCreateMappedSection(_In_ PFILE_OBJECT FileObject,
+                                  _In_ ULONG SectionPageProtection);
+
+VOID
+NTAPI
+FsRtlReleaseFileForCcFlush(IN PFILE_OBJECT FileObject);
+
+NTSTATUS
+NTAPI
+FsRtlAcquireFileForCcFlushEx(IN PFILE_OBJECT FileObject);

@@ -443,24 +443,11 @@ MiInitBalancerThread(VOID)
 {
     KPRIORITY Priority;
     NTSTATUS Status;
-#if !defined(__GNUC__)
-
-    LARGE_INTEGER dummyJunkNeeded;
-    dummyJunkNeeded.QuadPart = -20000000LL; /* 2 sec */
-    ;
-#endif
-
+    LARGE_INTEGER TimerValue = { .QuadPart = -20000000LL }; /* 2 sec */
 
     KeInitializeEvent(&MiBalancerEvent, SynchronizationEvent, FALSE);
     KeInitializeTimerEx(&MiBalancerTimer, SynchronizationTimer);
-    KeSetTimerEx(&MiBalancerTimer,
-#if defined(__GNUC__)
-                 (LARGE_INTEGER)(LONGLONG)-20000000LL,     /* 2 sec */
-#else
-                 dummyJunkNeeded,
-#endif
-                 2000,         /* 2 sec */
-                 NULL);
+    KeSetTimerEx(&MiBalancerTimer, TimerValue, 2000, NULL); /* 2 sec */
 
     Status = PsCreateSystemThread(&MiBalancerThreadHandle,
                                   THREAD_ALL_ACCESS,

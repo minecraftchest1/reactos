@@ -21,6 +21,10 @@ if(CMAKE_CROSSCOMPILING)
     add_library(cmlib ${SOURCE})
     add_dependencies(cmlib bugcodes xdk)
     add_pch(cmlib cmlib.h SOURCE)
+
+    if (GDB AND SEPARATE_DBG)
+        target_compile_options(cmlib PRIVATE -O0)
+    endif()
 else()
     add_definitions(
         -D__NO_CTYPE_INLINES

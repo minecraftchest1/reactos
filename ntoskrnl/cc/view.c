@@ -158,13 +158,6 @@ CcRosTraceCacheMap (
 
 NTSTATUS
 NTAPI
-MmFlushVirtualMemory(IN PEPROCESS Process,
-                     IN OUT PVOID *BaseAddress,
-                     IN OUT PSIZE_T RegionSize,
-                     OUT PIO_STATUS_BLOCK IoStatusBlock);
-
-NTSTATUS
-NTAPI
 CcRosFlushVacb (
     PROS_VACB Vacb)
 {
@@ -185,7 +178,7 @@ CcRosFlushVacb (
         HaveLock = TRUE;
     }
 
-    Status = MmFlushVirtualMemory(NULL, &Vacb->BaseAddress, &FlushSize, &Iosb);
+    Status = MmFlushVirtualMemory(PsInitialSystemProcess, &Vacb->BaseAddress, &FlushSize, &Iosb);
 
     if (HaveLock)
     {
@@ -587,14 +580,13 @@ CcRosCreateVacb (
     KIRQL oldIrql;
     ULONG Refs;
     BOOLEAN Retried;
-    SIZE_T ViewSize = VACB_MAPPING_GRANULARITY;
+    SIZE_T ViewSize;
 
     ASSERT(SharedCacheMap);
 
     DPRINT("CcRosCreateVacb()\n");
 
     current = ExAllocateFromNPagedLookasideList(&VacbLookasideList);
-    current->BaseAddress = NULL;
     current->Valid = FALSE;
     current->Dirty = FALSE;
     current->PageOut = FALSE;
@@ -616,9 +608,19 @@ CcRosCreateVacb (
 
     Retried = FALSE;
 Retry:
-    /* Map VACB in system space */
-    Status = MmMapViewInSystemSpaceEx(SharedCacheMap->Section, &current->BaseAddress, &ViewSize, &current->FileOffset);
-
+    /* Map VACB in the system process address space */
+    current->BaseAddress = NULL;
+    ViewSize = VACB_MAPPING_GRANULARITY;
+    Status = MmMapViewOfSection(SharedCacheMap->Section,
+                                PsInitialSystemProcess,
+                                &current->BaseAddress,
+                                0,
+                                0,
+                                &current->FileOffset,
+                                &ViewSize,
+                                ViewUnmap,
+                                MEM_RESERVE,
+                                PAGE_READWRITE);
     if (!NT_SUCCESS(Status))
     {
         ULONG Freed;
@@ -634,9 +636,13 @@ Retry:
             goto Retry;
         }
 
+        DPRINT1("VACB creation failed with 0x%08x\n", Status);
+
         ExFreeToNPagedLookasideList(&VacbLookasideList, current);
         return Status;
     }
+
+    ASSERT(ViewSize == VACB_MAPPING_GRANULARITY);
 
     oldIrql = KeAcquireQueuedSpinLock(LockQueueMasterLock);
 
@@ -746,10 +752,10 @@ CcRosEnsureVacbResident(
         return FALSE;
     }
 
-    BaseAddress = (PVOID)((ULONG_PTR)Vacb->BaseAddress + Offset);
+    BaseAddress = Add2Ptr(Vacb->BaseAddress, Offset);
 
     /* Check if the pages are resident */
-    if (!MmArePagesResident(NULL, BaseAddress, Length))
+    if (!MmArePagesResident(PsInitialSystemProcess, BaseAddress, Length))
     {
         if (!Wait)
         {
@@ -758,7 +764,7 @@ CcRosEnsureVacbResident(
 
         if (!NoRead)
         {
-            NTSTATUS Status = MmMakePagesResident(NULL, BaseAddress, Length);
+            NTSTATUS Status = MmMakePagesResident(PsInitialSystemProcess, BaseAddress, Length);
             if (!NT_SUCCESS(Status))
                 ExRaiseStatus(Status);
         }
@@ -863,7 +869,7 @@ CcRosInternalFreeVacb (
 #endif
 
     /* Delete the mapping */
-    Status = MmUnmapViewInSystemSpace(Vacb->BaseAddress);
+    Status = MmUnmapViewOfSection(PsInitialSystemProcess, Vacb->BaseAddress);
     if (!NT_SUCCESS(Status))
     {
         DPRINT1("Failed to unmap VACB from System address space! Status 0x%08X\n", Status);

@@ -49,7 +49,7 @@ CcGetFileObjectFromBcb (
 
     CCTRACE(CC_API_DEBUG, "Bcb=%p\n", Bcb);
 
-    return iBcb->Vacb->SharedCacheMap->FileObject;
+    return iBcb->SharedCacheMap->FileObject;
 }
 
 /*

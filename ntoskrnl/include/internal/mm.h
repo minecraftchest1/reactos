@@ -1355,6 +1355,15 @@ MmMakePagesDirty(
     _In_ PVOID Address,
     _In_ ULONG Length);
 
+
+NTSTATUS
+NTAPI
+MmFlushVirtualMemory(
+    _In_ PEPROCESS Process,
+    _Inout_ PVOID *BaseAddress,
+    _Inout_ PSIZE_T RegionSize,
+    _Out_ PIO_STATUS_BLOCK IoStatusBlock);
+
 NTSTATUS
 NTAPI
 MmRosFlushVirtualMemory(

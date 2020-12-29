@@ -233,7 +233,8 @@ typedef struct _INTERNAL_BCB
     /* Lock */
     ERESOURCE Lock;
     PUBLIC_BCB PFCB;
-    PROS_VACB Vacb;
+    PVOID SystemMap;
+    PROS_SHARED_CACHE_MAP SharedCacheMap;
     ULONG PinCount;
     CSHORT RefCount; /* (At offset 0x34 on WinNT4) */
     LIST_ENTRY BcbEntry;

@@ -438,12 +438,22 @@ CcPinMappedData (
     OUT	PVOID * Bcb)
 {
     BOOLEAN Result;
-    PVOID Buffer;
     PINTERNAL_BCB iBcb;
     PROS_SHARED_CACHE_MAP SharedCacheMap;
+    LONGLONG MapStart, MapEnd;
 
     CCTRACE(CC_API_DEBUG, "FileObject=%p FileOffset=%p Length=%lu Flags=0x%lx\n",
         FileObject, FileOffset, Length, Flags);
+
+    iBcb = *Bcb;
+
+    if (!iBcb)
+    {
+        PVOID Buffer;
+
+        /* Simply pin data, whatever the caller will do without a buffer... */
+        return CcPinRead(FileObject, FileOffset, Length, Flags, Bcb, &Buffer);
+    }
 
     ASSERT(FileObject);
     ASSERT(FileObject->SectionObjectPointer);
@@ -457,15 +467,59 @@ CcPinMappedData (
         return FALSE;
     }
 
-    iBcb = *Bcb;
+    /* Check that we are within the BCB range */
+    if (FileOffset->QuadPart < iBcb->PFCB.MappedFileOffset.QuadPart)
+        ExRaiseStatus(STATUS_INVALID_PARAMETER);
+    if (!NT_SUCCESS(RtlLongLongAdd(FileOffset->QuadPart, Length, &MapEnd)))
+        ExRaiseStatus(STATUS_INVALID_PARAMETER);
+    if (MapEnd > iBcb->PFCB.MappedFileOffset.QuadPart + iBcb->PFCB.MappedLength)
+        ExRaiseStatus(STATUS_INVALID_PARAMETER);
 
-    ++CcPinMappedDataCount;
-
-    Result = CcpPinData(SharedCacheMap, FileOffset, Length, Flags, Bcb, &Buffer);
-    if (Result)
+    /* Ensure the underlying memory is resident */
+    MapStart = FileOffset->QuadPart;
+    while (MapStart < MapEnd)
     {
-        CcUnpinData(iBcb);
+        NTSTATUS Status;
+        BOOLEAN Result;
+        PROS_VACB Vacb;
+        ULONG VacbOffset = (ULONG)(MapStart % VACB_MAPPING_GRANULARITY);
+        ULONG VacbLength = min(MapEnd - MapStart, VACB_MAPPING_GRANULARITY - VacbOffset);
+
+        Status = CcRosGetVacb(SharedCacheMap, MapStart, &Vacb);
+        if (!NT_SUCCESS(Status))
+            ExRaiseStatus(Status);
+
+        _SEH2_TRY
+        {
+            Result = CcRosEnsureVacbResident(Vacb,
+                                             BooleanFlagOn(Flags, PIN_WAIT),
+                                             BooleanFlagOn(Flags, PIN_NO_READ),
+                                             VacbOffset, VacbLength);
+        }
+        _SEH2_FINALLY
+        {
+            CcRosReleaseVacb(SharedCacheMap, Vacb, TRUE, FALSE, FALSE);
+        }
+        _SEH2_END;
+
+        if (!Result)
+            return FALSE;
+
+        MapStart += VacbLength;
     }
+
+    /* Pin for real */
+    if (BooleanFlagOn(Flags, PIN_EXCLUSIVE))
+    {
+        Result = ExAcquireResourceExclusiveLite(&iBcb->Lock, BooleanFlagOn(Flags, PIN_WAIT));
+    }
+    else
+    {
+        Result = ExAcquireSharedStarveExclusive(&iBcb->Lock, BooleanFlagOn(Flags, PIN_WAIT));
+    }
+
+    if (Result)
+        iBcb->PinCount++;
 
     return Result;
 }

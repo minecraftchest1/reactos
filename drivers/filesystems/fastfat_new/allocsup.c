@@ -1707,8 +1707,8 @@ Arguments:
 
     PAGED_CODE();
 
-    DebugTrace(+1, Dbg, "FatLookupAllocationSize\n", 0);
-    DebugTrace( 0, Dbg, "  FcbOrDcb  =      %p\n", FcbOrDcb);
+    DebugTrace(+1, 0, "FatLookupAllocationSize\n", 0);
+    DebugTrace( 0, 0, "  FcbOrDcb  =      %p\n", FcbOrDcb);
 
     //
     //  We call FatLookupFileAllocation with Vbo of 0xffffffff - 1.

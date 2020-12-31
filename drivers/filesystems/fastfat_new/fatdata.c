@@ -131,7 +131,7 @@ LOGICAL FatDiskAccountingEnabled = FALSE;
 
 #ifdef FASTFATDBG
 
-LONG FatDebugTraceLevel = 0x00000009;
+LONG FatDebugTraceLevel = DEBUG_TRACE_FILEINFO | 0x00000009;
 LONG FatDebugTraceIndent = 0;
 
 ULONG FatFsdEntryCount = 0;

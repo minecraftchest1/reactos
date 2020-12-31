@@ -1730,6 +1730,8 @@ Arguments:
     //
 
     if (FcbOrDcb->Header.FileSize.LowPart > FcbOrDcb->Header.AllocationSize.LowPart) {
+        DebugTrace(0, 0, "FcbOrDcb->Header.FileSize = %I64x, FcbOrDcb->Header.AllocationSize = %I64x\n",
+            &FcbOrDcb->Header.FileSize, &FcbOrDcb->Header.AllocationSize);
 
         FatPopUpFileCorrupt( IrpContext, FcbOrDcb );
         FatRaiseStatus( IrpContext, STATUS_FILE_CORRUPT_ERROR );

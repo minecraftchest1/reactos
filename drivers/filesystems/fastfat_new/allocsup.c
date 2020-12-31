@@ -680,12 +680,12 @@ Arguments:
     Vcb = FcbOrDcb->Vcb;
 
 
-    DebugTrace(+1, Dbg, "FatLookupFileAllocation\n", 0);
-    DebugTrace( 0, Dbg, "  FcbOrDcb  = %p\n", FcbOrDcb);
-    DebugTrace( 0, Dbg, "  Vbo       = %8lx\n", Vbo);
-    DebugTrace( 0, Dbg, "  pLbo       = %8lx\n", Lbo);
-    DebugTrace( 0, Dbg, "  pByteCount = %8lx\n", ByteCount);
-    DebugTrace( 0, Dbg, "  pAllocated = %8lx\n", Allocated);
+    DebugTrace(+1, 0, "FatLookupFileAllocation\n", 0);
+    DebugTrace( 0, 0, "  FcbOrDcb  = %p\n", FcbOrDcb);
+    DebugTrace( 0, 0, "  Vbo       = %8lx\n", Vbo);
+    DebugTrace( 0, 0, "  pLbo       = %8lx\n", Lbo);
+    DebugTrace( 0, 0, "  pByteCount = %8lx\n", ByteCount);
+    DebugTrace( 0, 0, "  pAllocated = %8lx\n", Allocated);
 
     Context.Bcb = NULL;
 
@@ -711,8 +711,8 @@ Arguments:
             *EndOnMax = TRUE;
         }
 
-        DebugTrace( 0, Dbg, "Found run in Mcb.\n", 0);
-        DebugTrace(-1, Dbg, "FatLookupFileAllocation -> (VOID)\n", 0);
+        DebugTrace( 0, 0, "Found run in Mcb.\n", 0);
+        DebugTrace(-1, 0, "FatLookupFileAllocation -> (VOID)\n", 0);
         return;
     }
 
@@ -739,8 +739,8 @@ Arguments:
 
         *Allocated = FALSE;
 
-        DebugTrace( 0, Dbg, "Vbo beyond end of file.\n", 0);
-        DebugTrace(-1, Dbg, "FatLookupFileAllocation -> (VOID)\n", 0);
+        DebugTrace( 0, 0, "Vbo beyond end of file.\n", 0);
+        DebugTrace(-1, 0, "FatLookupFileAllocation -> (VOID)\n", 0);
         return;
     }
 
@@ -755,7 +755,7 @@ Arguments:
 
     if (FatLookupLastMcbEntry( Vcb, &FcbOrDcb->Mcb, &CurrentVbo, &CurrentLbo, &Runs )) {
 
-        DebugTrace( 0, Dbg, "Current Mcb size = %8lx.\n", CurrentVbo + 1);
+        DebugTrace( 0, 0, "Current Mcb size = %8lx.\n", CurrentVbo + 1);
 
         CurrentVbo -= (BytesPerCluster - 1);
         CurrentLbo -= (BytesPerCluster - 1);
@@ -768,7 +768,7 @@ Arguments:
 
     } else {
 
-        DebugTrace( 0, Dbg, "Mcb empty.\n", 0);
+        DebugTrace( 0, 0, "Mcb empty.\n", 0);
 
         //
         //  Check for an FcbOrDcb that has no allocation
@@ -778,8 +778,8 @@ Arguments:
 
             *Allocated = FALSE;
 
-            DebugTrace( 0, Dbg, "File has no allocation.\n", 0);
-            DebugTrace(-1, Dbg, "FatLookupFileAllocation -> (VOID)\n", 0);
+            DebugTrace( 0, 0, "File has no allocation.\n", 0);
+            DebugTrace(-1, 0, "FatLookupFileAllocation -> (VOID)\n", 0);
             return;
 
         } else {
@@ -879,7 +879,7 @@ Arguments:
                 //  meaningless.
                 //
 
-                DebugTrace( 0, Dbg, "Read last cluster of file.\n", 0);
+                DebugTrace( 0, 0, "Read last cluster of file.\n", 0);
 
                 //
                 //  Detect the case of the maximal file.  Note that this really isn't
@@ -900,10 +900,10 @@ Arguments:
 
                 if (FirstLboOfCurrentRun != 0 ) {
 
-                    DebugTrace( 0, Dbg, "Adding a run to the Mcb.\n", 0);
-                    DebugTrace( 0, Dbg, "  Vbo    = %08lx.\n", FirstVboOfCurrentRun);
-                    DebugTrace( 0, Dbg, "  Lbo    = %08lx.\n", FirstLboOfCurrentRun);
-                    DebugTrace( 0, Dbg, "  Length = %08lx.\n", CurrentVbo - FirstVboOfCurrentRun);
+                    DebugTrace( 0, 0, "Adding a run to the Mcb.\n", 0);
+                    DebugTrace( 0, 0, "  Vbo    = %08lx.\n", FirstVboOfCurrentRun);
+                    DebugTrace( 0, 0, "  Lbo    = %08lx.\n", FirstLboOfCurrentRun);
+                    DebugTrace( 0, 0, "  Length = %08lx.\n", CurrentVbo - FirstVboOfCurrentRun);
 
                     (VOID)FatAddMcbEntry( Vcb,
                                           &FcbOrDcb->Mcb,
@@ -935,7 +935,7 @@ Arguments:
 
                     FcbOrDcb->Header.AllocationSize.QuadPart = CurrentVbo;
 
-                    DebugTrace( 0, Dbg, "New file allocation size = %08lx.\n", CurrentVbo);
+                    DebugTrace( 0, 0, "New file allocation size = %08lx.\n", CurrentVbo);
                     try_return ( NOTHING );
                 }
 
@@ -985,10 +985,10 @@ Arguments:
 
                     if ( FirstLboOfCurrentRun != 0 ) {
 
-                        DebugTrace( 0, Dbg, "Adding a run to the Mcb.\n", 0);
-                        DebugTrace( 0, Dbg, "  Vbo    = %08lx.\n", FirstVboOfCurrentRun);
-                        DebugTrace( 0, Dbg, "  Lbo    = %08lx.\n", FirstLboOfCurrentRun);
-                        DebugTrace( 0, Dbg, "  Length = %08lx.\n", CurrentVbo - FirstVboOfCurrentRun);
+                        DebugTrace( 0, 0, "Adding a run to the Mcb.\n", 0);
+                        DebugTrace( 0, 0, "  Vbo    = %08lx.\n", FirstVboOfCurrentRun);
+                        DebugTrace( 0, 0, "  Lbo    = %08lx.\n", FirstLboOfCurrentRun);
+                        DebugTrace( 0, 0, "  Length = %08lx.\n", CurrentVbo - FirstVboOfCurrentRun);
 
                         FatAddMcbEntry( Vcb,
                                         &FcbOrDcb->Mcb,
@@ -1071,7 +1071,7 @@ Arguments:
 
         FatUnpinBcb( IrpContext, Context.Bcb );
 
-        DebugTrace(-1, Dbg, "FatLookupFileAllocation -> (VOID)\n", 0);
+        DebugTrace(-1, 0, "FatLookupFileAllocation -> (VOID)\n", 0);
     } _SEH2_END;
 
     return;
@@ -1737,7 +1737,7 @@ Arguments:
         FatRaiseStatus( IrpContext, STATUS_FILE_CORRUPT_ERROR );
     }
 
-    DebugTrace(-1, Dbg, "FatLookupFileAllocationSize -> (VOID)\n", 0);
+    DebugTrace(-1, 0, "FatLookupFileAllocationSize -> (VOID)\n", 0);
     return;
 }
 
